@@ -5,7 +5,7 @@ const STORAGE_KEY_BACKEND_CONFIG = 'sora_calculator_backend_config';
 
 export const DEFAULT_BACKEND_CONFIG: BackendConfig = {
   mode: 'offline_archive',
-  customEndpointUrl: 'http://localhost:8000/api/mas-sora',
+  customEndpointUrl: '/api/sora',
   apiKey: '',
   isCustomConnected: false,
 };
@@ -45,13 +45,14 @@ export interface FetchRatesResponse {
 export async function fetchSoraRates(config: BackendConfig): Promise<FetchRatesResponse> {
   const startTime = performance.now();
 
-  // Mode 1: Custom Backend Integration (Ready for user's backend)
+  // Mode 1: Custom Backend / Serverless Endpoint Integration (/api/sora or custom server)
   if (config.mode === 'custom_backend' && config.customEndpointUrl) {
     try {
       const headers: Record<string, string> = {
         'Accept': 'application/json',
       };
       if (config.apiKey) {
+        headers['KeyId'] = config.apiKey;
         headers['Authorization'] = `Bearer ${config.apiKey}`;
       }
 
@@ -60,14 +61,14 @@ export async function fetchSoraRates(config: BackendConfig): Promise<FetchRatesR
         headers,
       });
 
-      if (!response.ok) {
-        throw new Error(`Custom backend responded with HTTP status ${response.status}`);
-      }
-
       const data = await response.json();
       const latencyMs = Math.round(performance.now() - startTime);
 
-      // Verify and adapt custom backend payload
+      if (!response.ok) {
+        throw new Error(data.message || data.error || `Server responded with status ${response.status}`);
+      }
+
+      // Verify and adapt serverless MAS response payload
       if (Array.isArray(data.rates) && data.rates.length > 0) {
         return {
           source: 'custom_backend',
@@ -75,18 +76,18 @@ export async function fetchSoraRates(config: BackendConfig): Promise<FetchRatesR
           latestBenchmark: data.latestBenchmark || LATEST_MAS_BENCHMARKS,
           isFallback: false,
           latencyMs,
-          message: `Connected successfully to custom backend (${latencyMs}ms)`,
+          message: `Connected successfully to MAS Serverless Gateway (${latencyMs}ms)`,
         };
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown network failure';
-      console.warn('Custom backend failed, falling back to MAS official archive:', msg);
+      console.warn('Serverless endpoint request failed, falling back to MAS official archive:', msg);
       return {
         source: 'offline_archive',
         rates: MAS_OFFICIAL_ARCHIVE,
         latestBenchmark: LATEST_MAS_BENCHMARKS,
         isFallback: true,
-        message: `Custom backend unreachable (${msg}). Using MAS official baseline archive.`,
+        message: `${msg}. Using MAS official baseline archive.`,
       };
     }
   }
@@ -101,7 +102,6 @@ export async function fetchSoraRates(config: BackendConfig): Promise<FetchRatesR
           const points = json.series[0].points || [];
           const latencyMs = Math.round(performance.now() - startTime);
           
-          // Augment latest MAS benchmarks with any new series points
           return {
             source: 'public_api',
             rates: MAS_OFFICIAL_ARCHIVE,
@@ -142,7 +142,10 @@ export async function testBackendConnection(
   const start = performance.now();
   try {
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+    if (apiKey) {
+      headers['KeyId'] = apiKey;
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 6000);

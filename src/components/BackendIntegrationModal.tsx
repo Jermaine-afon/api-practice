@@ -167,7 +167,7 @@ export const BackendIntegrationModal: React.FC<BackendIntegrationModalProps> = (
           {/* Custom Backend Form (Active if selected or expandable) */}
           <div className={`p-4 rounded-xl border ${localConfig.mode === 'custom_backend' ? 'border-slate-300 bg-slate-50/50' : 'border-slate-200 bg-slate-50/30'}`}>
             <div className="font-semibold text-slate-900 mb-2 flex items-center justify-between">
-              <span>Custom Backend Configuration</span>
+              <span>Serverless MAS Connection & Custom Backend</span>
               {localConfig.isCustomConnected && (
                 <span className="text-emerald-700 flex items-center gap-1 text-[11px]">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Connected
@@ -177,12 +177,30 @@ export const BackendIntegrationModal: React.FC<BackendIntegrationModalProps> = (
 
             <div className="space-y-3">
               <div>
-                <label className="text-slate-600 block mb-1">
-                  Endpoint URL (GET)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-slate-600 block">
+                    Endpoint URL (GET)
+                  </label>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setLocalConfig({ ...localConfig, customEndpointUrl: '/api/sora' })}
+                      className="text-[10px] text-slate-600 bg-slate-200 hover:bg-slate-300 px-1.5 py-0.5 rounded cursor-pointer"
+                    >
+                      Use /api/sora
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLocalConfig({ ...localConfig, customEndpointUrl: '/api/health' })}
+                      className="text-[10px] text-slate-600 bg-slate-200 hover:bg-slate-300 px-1.5 py-0.5 rounded cursor-pointer"
+                    >
+                      Use /api/health
+                    </button>
+                  </div>
+                </div>
                 <input
                   type="text"
-                  placeholder="http://localhost:8000/api/mas-sora or https://your-server.com/rates"
+                  placeholder="/api/sora or http://localhost:3000/api/sora"
                   value={localConfig.customEndpointUrl}
                   onChange={(e) => setLocalConfig({ ...localConfig, customEndpointUrl: e.target.value })}
                   className="w-full px-3 py-2 text-xs font-mono text-slate-900 bg-white border border-slate-200 rounded-md focus:outline-hidden focus:ring-1 focus:ring-slate-900"
@@ -191,15 +209,18 @@ export const BackendIntegrationModal: React.FC<BackendIntegrationModalProps> = (
 
               <div>
                 <label className="text-slate-600 block mb-1">
-                  Authorization Header / API Key (Optional)
+                  MAS KeyId / Header (Sent as <code className="font-mono text-slate-800">KeyId: &lt;MAS_KEY_ID&gt;</code>)
                 </label>
                 <input
                   type="password"
-                  placeholder="Bearer token or secret key"
+                  placeholder="Enter your MAS KeyId (or configure MAS_KEY_ID in .env)"
                   value={localConfig.apiKey || ''}
                   onChange={(e) => setLocalConfig({ ...localConfig, apiKey: e.target.value })}
                   className="w-full px-3 py-2 text-xs font-mono text-slate-900 bg-white border border-slate-200 rounded-md focus:outline-hidden focus:ring-1 focus:ring-slate-900"
                 />
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  Leave blank to use the <code className="font-mono">MAS_KEY_ID</code> environment variable defined in your server environment.
+                </span>
               </div>
 
               <div className="flex items-center gap-3 pt-1">
